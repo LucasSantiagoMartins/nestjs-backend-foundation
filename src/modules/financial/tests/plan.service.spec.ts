@@ -6,7 +6,7 @@ describe('PlanService', () => {
       create: jest.fn((data) => data),
       save: jest.fn().mockResolvedValue({
         id: 1,
-        name: 'Nomad Plus',
+        name: 'Backend Foundation Plus',
         monthlyPrice: '9.90',
         currency: 'EUR',
         yearlyPrice: null,
@@ -20,7 +20,7 @@ describe('PlanService', () => {
     };
     const service = new PlanService(repository as any);
     const created = await service.create({
-      name: 'Nomad Plus',
+      name: 'Backend Foundation Plus',
       monthlyPrice: 9.9,
       benefits: ['Assistente de IA'],
     });
@@ -33,7 +33,7 @@ describe('PlanService', () => {
     repository.save.mockRejectedValueOnce(new Error('database unavailable'));
     await expect(
       service.create({
-        name: 'Nomad Plus',
+        name: 'Backend Foundation Plus',
         monthlyPrice: 9.9,
         benefits: [],
       }),
