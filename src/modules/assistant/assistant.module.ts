@@ -4,9 +4,10 @@ import { JobModule } from '@modules/job/job.module';
 import { Module } from '@nestjs/common';
 import { AssistantController } from './controllers/assistant.controller';
 import { AssistantService } from './services/assistant.service';
+import { CommunityModule } from '@modules/community/community.module';
 
 @Module({
-  imports: [IntelligenceModule, JobModule, HousingModule],
+  imports: [IntelligenceModule, JobModule, HousingModule, CommunityModule],
   controllers: [AssistantController],
   providers: [AssistantService],
   exports: [AssistantService],
