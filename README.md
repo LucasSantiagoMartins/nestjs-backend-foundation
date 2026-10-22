@@ -29,6 +29,7 @@ Fundação backend modular com NestJS e TypeScript, criada para demonstrar decis
 - [Pré-requisitos](#pré-requisitos)
 - [Executar localmente](#executar-localmente)
 - [API e exemplos](#api-e-exemplos)
+- [Testing & CI/CD](#testing--cicd)
 - [Testes e qualidade](#testes-e-qualidade)
 - [Docker e deployment](#docker-e-deployment)
 - [Decisões de engenharia](#decisões-de-engenharia)
@@ -238,6 +239,46 @@ POST /webhooks/stripe
 ```
 
 Os handlers aplicam um interceptor de resposta comum, por isso a forma exata de cada payload depende do DTO e do decorator de mensagem de sucesso. Não assuma um envelope ou exemplo de JSON sem consultar o endpoint concreto.
+
+## Testing & CI/CD
+
+As imagens abaixo mostram a API em execução, exemplos de chamadas e validações no Insomnia, os testes automatizados e o workflow de CI/CD. As capturas são apresentadas em largura fluida para se adaptarem ao espaço disponível.
+
+### API Runtime
+
+A captura demonstra a API em execução.
+
+<p align="center">
+  <img src="docs/screenshots/api-running.png" alt="API NestJS em execução" width="900" />
+</p>
+
+### API Testing — Insomnia
+
+Os endpoints foram exercitados no Insomnia, incluindo respostas bem-sucedidas, payloads e erros de validação.
+
+<p align="center">
+  <img src="docs/screenshots/insomnia-housing.png" alt="Testes de endpoints de alojamento no Insomnia" width="900" />
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/insomnia-community.png" alt="Testes de endpoints de comunidade no Insomnia" width="900" />
+</p>
+
+### Automated Tests
+
+Os testes automatizados ajudam a validar o comportamento da aplicação e a reduzir regressões durante o desenvolvimento.
+
+<p align="center">
+  <img src="docs/screenshots/tests.png" alt="Execução de testes automatizados" width="900" />
+</p>
+
+### Continuous Integration
+
+O GitHub Actions executa as etapas de validação configuradas sempre que o workflow é acionado. Quando o CI passa, o workflow pode seguir para o deployment na VPS.
+
+<p align="center">
+  <img src="docs/screenshots/ci-pipeline.png" alt="Pipeline CI/CD no GitHub Actions" width="900" />
+</p>
 
 ## Testes e qualidade
 
