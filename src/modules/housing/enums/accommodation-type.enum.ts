@@ -1,0 +1,5 @@
+export enum AccommodationType {
+  ENTIRE_PLACE = 'ENTIRE_PLACE',
+  PRIVATE_ROOM = 'PRIVATE_ROOM',
+  SHARED_ROOM = 'SHARED_ROOM',
+}
