@@ -1,0 +1,38 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: nestjs-backend-foundation-postgres-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASS}
+      POSTGRES_DB: ${DB_NAME}
+      TZ: Europe/Lisbon
+      PGTZ: Europe/Lisbon
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata_dev:/var/lib/postgresql/data
+    networks:
+      - app_network
+
+  redis:
+    image: redis:7
+    container_name: nestjs-backend-foundation-redis-dev
+    restart: always
+    environment:
+      TZ: Europe/Lisbon
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data_dev:/data
+    networks:
+      - app_network
+
+volumes:
+  pgdata_dev:
+  redis_data_dev:
+
+networks:
+  app_network:
+    driver: bridge
