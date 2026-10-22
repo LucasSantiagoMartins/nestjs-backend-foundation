@@ -6,6 +6,14 @@ Fundação backend modular com NestJS e TypeScript, criada para demonstrar decis
 ![NestJS 10](https://img.shields.io/badge/NestJS-10-E0234E?logo=nestjs&logoColor=white)
 ![TypeScript 5](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
 ![PostgreSQL 15](https://img.shields.io/badge/PostgreSQL-15-4169E1?logo=postgresql&logoColor=white)
+![Redis 7](https://img.shields.io/badge/Redis-7-DC382D?logo=redis&logoColor=white)
+![Cloudflare R2](https://img.shields.io/badge/Cloudflare-R2-F38020?logo=cloudflare&logoColor=white)
+![Stripe](https://img.shields.io/badge/Stripe-Payments-635BFF?logo=stripe&logoColor=white)
+![Google OAuth](https://img.shields.io/badge/Google-OAuth%202.0-4285F4?logo=google&logoColor=white)
+![Firebase Admin](https://img.shields.io/badge/Firebase-Admin-FFCA28?logo=firebase&logoColor=black)
+![Resend](https://img.shields.io/badge/Resend-Email-000000?logo=resend&logoColor=white)
+![Groq](https://img.shields.io/badge/Groq-AI-000000?logo=groq&logoColor=white)
+![Better Stack](https://img.shields.io/badge/Better%20Stack-Logging-000000?logo=betterstack&logoColor=white)
 
 > Projeto de portefólio desenvolvido por **Lucas Santiago de Oliveira Martins**, Backend Engineer. É uma fundação técnica genérica para demonstração e evolução; não documenta um produto comercial.
 
@@ -255,7 +263,37 @@ npm run format           # Prettier escreve os ficheiros abrangidos
 
 `docker-compose.yml` define PostgreSQL, Redis e API na mesma rede Docker, com volumes persistentes para dados e API publicada em `127.0.0.1:3000`. A aplicação resolve os serviços pelos nomes `postgres` e `redis` no ambiente containerizado, conforme o `.env` utilizado.
 
-O workflow `.github/workflows/deploy.yml` dispara em push para `main` ou manualmente. Primeiro executa `npm ci`, testes unitários/e2e e build. Após sucesso, liga por SSH à VPS, atualiza `/opt/apps/nestjs-backend-foundation-api` para `origin/main`, valida `docker compose config` e executa `docker compose up -d --build --remove-orphans`. Secrets do GitHub esperados pelo workflow: `VPS_SSH_KEY`, `VPS_KNOWN_HOSTS`, `VPS_HOST` e `VPS_USER`. O host precisa ter checkout, `.env` e Docker Compose configurados.
+O workflow `.github/workflows/deploy.yml` é executado a cada push para `main` e também pode ser iniciado manualmente. O job `ci` instala dependências com `npm ci`, executa testes unitários e e2e e compila a aplicação. O job `deploy` só começa após o sucesso do CI: configura SSH, conecta à VPS, atualiza `/opt/apps/nestjs-backend-foundation-api` para `origin/main`, valida a configuração Compose e recria os serviços com `docker compose up -d --build --remove-orphans`.
+
+### Preparar a VPS
+
+O workflow pressupõe que a VPS já tenha Docker Engine com Compose, Git e uma cópia deste repositório em `/opt/apps/nestjs-backend-foundation-api`. A conta SSH configurada deve poder executar Docker e atualizar o checkout com `git fetch origin main`. Prepare a pasta, clone o repositório e crie o `.env` de produção nessa pasta antes do primeiro deploy:
+
+Execute esses comandos com a conta Linux que será usada como `VPS_USER`:
+
+```bash
+sudo mkdir -p /opt/apps/nestjs-backend-foundation-api
+sudo chown "$USER":"$USER" /opt/apps/nestjs-backend-foundation-api
+git clone <URL_DO_REPOSITORIO> /opt/apps/nestjs-backend-foundation-api
+cd /opt/apps/nestjs-backend-foundation-api
+cp .env.example .env
+chmod 600 .env
+```
+
+Edite `.env` com valores de produção. Dentro do Compose, use `DB_HOST=postgres`, `DB_PORT=5432`, `REDIS_HOST=redis` e `REDIS_PORT=6379`, porque a API e esses serviços comunicam pela rede Docker. Preencha também os segredos e credenciais externos necessários à aplicação. O workflow não envia esse ficheiro à VPS; ele permanece no servidor.
+
+### Configurar os secrets no GitHub
+
+No GitHub, abra o repositório e aceda a **Settings → Secrets and variables → Actions → Secrets → New repository secret**. Crie os quatro secrets abaixo com estes nomes exatos. O workflow referencia os valores via `secrets.*`; são credenciais da ligação de deployment e não substituem as variáveis de ambiente da aplicação. [Documentação oficial do GitHub sobre Actions secrets](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets).
+
+| Secret | Valor a guardar | Como obter e para que serve |
+|---|---|---|
+| `VPS_HOST` | Endereço IP público ou hostname da VPS, sem `https://` e sem caminho. | Obtém no painel do provedor da VPS. É o destino SSH usado pelo workflow. |
+| `VPS_USER` | Nome da conta Linux usada para entrar na VPS, por exemplo `deploy`. | Crie uma conta dedicada para deployments e conceda-lhe acesso à pasta do projeto e execução de Docker. |
+| `VPS_SSH_KEY` | Conteúdo completo da chave SSH **privada** de deployment, incluindo as linhas `BEGIN` e `END`. | Gere um par dedicado localmente com `ssh-keygen -t ed25519 -N "" -C "nestjs-backend-foundation-deploy" -f ./nestjs-backend-foundation-deploy`. Instale o conteúdo de `nestjs-backend-foundation-deploy.pub` no `~/.ssh/authorized_keys` do `VPS_USER`; cole o conteúdo do ficheiro sem `.pub` no secret. Nunca publique nem commite a chave privada. |
+| `VPS_KNOWN_HOSTS` | Linha `known_hosts` correspondente ao servidor SSH. | Recolha a chave pública do host com `ssh-keyscan -H "$VPS_HOST"` e confirme a fingerprint por um canal confiável, como o console do provedor, antes de guardar a linha. O workflow usa `StrictHostKeyChecking=yes` para validar o host e evitar aceitar uma chave desconhecida automaticamente. |
+
+Depois de cadastrar os secrets, faça push para `main` para iniciar o fluxo. Para execução manual, abra **Actions → CI/CD - Deploy NestJS Backend Foundation API → Run workflow** e selecione `main`. O resultado dos jobs fica visível na execução do workflow. O utilizador que configura os secrets precisa de permissão para gerir as definições do repositório.
 
 ## Decisões de engenharia
 
