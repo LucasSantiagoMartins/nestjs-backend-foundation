@@ -308,20 +308,119 @@ O workflow `.github/workflows/deploy.yml` é executado a cada push para `main` e
 
 ### Preparar a VPS
 
-O workflow pressupõe que a VPS já tenha Docker Engine com Compose, Git e uma cópia deste repositório em `/opt/apps/nestjs-backend-foundation-api`. A conta SSH configurada deve poder executar Docker e atualizar o checkout com `git fetch origin main`. Prepare a pasta, clone o repositório e crie o `.env` de produção nessa pasta antes do primeiro deploy:
+Antes do deployment, prepare uma VPS Linux (recomenda-se Ubuntu). Os passos seguintes assumem um servidor novo e um workflow de deployment através de SSH e Docker.
 
-Execute esses comandos com a conta Linux que será usada como `VPS_USER`:
+#### 1. Configuração inicial do servidor
+
+Ligue-se à VPS com a conta administrativa inicial:
+
+```bash
+ssh root@IP_DO_SERVIDOR
+```
+
+Crie um utilizador dedicado ao deployment para as operações de rotina, em vez de usar `root`:
+
+```bash
+adduser deploy
+usermod -aG sudo deploy
+```
+
+Configure a autenticação por chave SSH para esse utilizador antes de desativar o acesso de `root` por palavra-passe. Na sua máquina local, copie a chave pública para o servidor:
+
+```bash
+ssh-copy-id deploy@IP_DO_SERVIDOR
+```
+
+Abra outro terminal e confirme que consegue iniciar sessão com a chave:
+
+```bash
+ssh deploy@IP_DO_SERVIDOR
+```
+
+Só depois de confirmar o acesso, edite `/etc/ssh/sshd_config` e configure:
+
+```text
+PermitRootLogin no
+PasswordAuthentication no
+PubkeyAuthentication yes
+```
+
+Valide e recarregue a configuração SSH:
+
+```bash
+sudo sshd -t
+sudo systemctl reload ssh
+```
+
+Mantenha a sessão SSH existente aberta até confirmar a nova configuração. Verifique o acesso por chave antes de desativar a autenticação por palavra-passe para evitar perder o acesso ao servidor.
+
+#### 2. Firewall e Docker
+
+Instale e configure o UFW para permitir apenas as portas de entrada necessárias. Para uma API pública atrás de um proxy inverso:
+
+```bash
+sudo apt update
+sudo apt install -y git ufw
+sudo ufw allow OpenSSH
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw enable
+sudo ufw status
+```
+
+A porta `22` é usada para SSH, `80` para HTTP e validação de certificados, e `443` para HTTPS. Se o SSH utilizar uma porta personalizada, permita essa porta antes de ativar o UFW. Exponha portas adicionais apenas quando necessário.
+
+Instale o Docker Engine e o plugin Docker Compose seguindo o [guia oficial de instalação do Docker Engine para Ubuntu](https://docs.docker.com/engine/install/ubuntu/). Confirme a instalação:
+
+```bash
+docker --version
+docker compose version
+```
+
+Se necessário, adicione o utilizador de deployment ao grupo Docker:
+
+```bash
+sudo usermod -aG docker deploy
+```
+
+Termine a sessão e volte a iniciar sessão para aplicar a associação ao grupo. A pertença ao grupo Docker concede privilégios equivalentes aos de `root`; limite-a a utilizadores de confiança.
+
+Mantenha PostgreSQL, Redis e outros serviços internos inacessíveis pela Internet pública. Publique apenas as portas exigidas pela arquitetura de deployment.
+
+#### 3. Preparar a pasta da aplicação
+
+O workflow espera encontrar o repositório em `/opt/apps/nestjs-backend-foundation-api`, acessível ao utilizador SSH de deployment. Execute os comandos seguintes com esse utilizador:
 
 ```bash
 sudo mkdir -p /opt/apps/nestjs-backend-foundation-api
 sudo chown "$USER":"$USER" /opt/apps/nestjs-backend-foundation-api
+
 git clone <URL_DO_REPOSITORIO> /opt/apps/nestjs-backend-foundation-api
 cd /opt/apps/nestjs-backend-foundation-api
+
 cp .env.example .env
 chmod 600 .env
 ```
 
-Edite `.env` com valores de produção. Dentro do Compose, use `DB_HOST=postgres`, `DB_PORT=5432`, `REDIS_HOST=redis` e `REDIS_PORT=6379`, porque a API e esses serviços comunicam pela rede Docker. Preencha também os segredos e credenciais externos necessários à aplicação. O workflow não envia esse ficheiro à VPS; ele permanece no servidor.
+Substitua `<URL_DO_REPOSITORIO>` pelo endereço real do repositório. Configure `.env` com valores de produção antes do deployment. Nunca faça commit do `.env` nem exponha segredos de produção em capturas de ecrã, logs ou na saída do GitHub Actions.
+
+Se o repositório já tiver sido clonado, não volte a cloná-lo; confirme o caminho do checkout e as permissões do utilizador.
+
+No `.env`, use `DB_HOST=postgres`, `DB_PORT=5432`, `REDIS_HOST=redis` e `REDIS_PORT=6379`, porque a API comunica com estes serviços através da rede Docker. Preencha também as credenciais externas exigidas pela aplicação. O workflow não envia o `.env` para a VPS; o ficheiro deve permanecer no servidor.
+
+#### 4. Configurar secrets do GitHub Actions e fazer deployment
+
+Adicione ao repositório os secrets de deployment indicados na secção seguinte, em **Settings → Secrets and variables → Actions**. Configure o endereço SSH, o nome do utilizador SSH, a chave privada de deployment e os restantes valores exigidos pelo workflow.
+
+Confirme que o utilizador de deployment tem acesso ao repositório e pode executar as operações Git esperadas pelo workflow, incluindo:
+
+```bash
+git fetch origin main
+```
+
+O workflow assume que a VPS tem Docker e Docker Compose instalados, que o repositório está no caminho esperado e que o `.env` de produção está configurado. Antes do primeiro deployment, reveja o ficheiro do workflow para confirmar os nomes efetivos dos secrets, a branch, os comandos de deployment e os requisitos do ambiente.
+
+Em produção, utilize chaves SSH, restrinja o acesso às credenciais de deployment, mantenha o sistema operativo e o Docker atualizados e configure HTTPS através de um proxy inverso ou de outra camada adequada para terminar TLS.
 
 ### Configurar os secrets no GitHub
 
